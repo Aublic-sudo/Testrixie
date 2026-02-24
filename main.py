@@ -184,7 +184,7 @@ photozip = 'https://i.ibb.co/v6Vr7HCt/1000003297.png'
 # Inline keyboard for start command
 BUTTONSCONTACT = InlineKeyboardMarkup([[
     InlineKeyboardButton(text="📞 Contact",
-                         url="https://t.me/Rixie HQ")
+                         url="https://t.me/RixieHQ")
 ]])
 keyboard = InlineKeyboardMarkup([
     [
@@ -202,7 +202,7 @@ image_urls = [
 ]
 
 
-@bot.on_message(filters.command("cookies") & filters.private)
+@bot.on_message(filters.command("cookies") & filters.private & auth_filter)
 async def cookies_handler(client: Client, m: Message):
     await m.reply_text("Please upload the cookies file (.txt format).",
                        quote=True)
@@ -236,7 +236,7 @@ async def cookies_handler(client: Client, m: Message):
         await m.reply_text(f"⚠️ An error occurred: {str(e)}")
 
 
-@bot.on_message(filters.command(["t2t"]))
+@bot.on_message(filters.command(["t2t"]) & auth_filter)
 async def text_to_txt(client, message: Message):
     user_id = str(message.from_user.id)
     # Inform the user to send the text data and its desired file name
@@ -281,7 +281,7 @@ UPLOAD_FOLDER = '/path/to/upload/folder'
 EDITED_FILE_PATH = '/path/to/save/edited_output.txt'
 
 
-@bot.on_message(filters.command("getcookies") & filters.private)
+@bot.on_message(filters.command("getcookies") & filters.private & auth_filter)
 async def getcookies_handler(client: Client, m: Message):
     try:
         # Send the cookies file to the user
@@ -293,7 +293,7 @@ async def getcookies_handler(client: Client, m: Message):
         await m.reply_text(f"⚠️ An error occurred: {str(e)}")
 
 
-@bot.on_message(filters.command(["stop"]))
+@bot.on_message(filters.command(["stop"]) & filters.user(OWNER_ID))
 async def restart_handler(_, m):
 
     await m.reply_text("🚦**STOPPED**", True)
@@ -328,7 +328,7 @@ async def start(bot: Client, m: Message):
                         [[
                             InlineKeyboardButton(
                                 "OWNER",
-                                url="https://t.me/RoxieHQ")
+                                url="https://t.me/RixieHQ")
                         ],
                          [
                              InlineKeyboardButton("ғᴇᴀᴛᴜʀᴇꜱ 🪔",
@@ -420,7 +420,7 @@ async def id_command(client, message: Message):
         f"<blockquote>The ID of this chat id is:</blockquote>\n`{chat_id}`")
 
 
-@bot.on_message(filters.command(["t2h"]))
+@bot.on_message(filters.command(["t2h"]) & auth_filter)
 async def call_html_handler(bot: Client, message: Message):
     await html_handler(bot, message)
 
@@ -1309,7 +1309,7 @@ async def txt_handler(bot: Client, m: Message):
         )
 
 
-@bot.on_message(filters.text & filters.private & ~filters.command(
+@bot.on_message(filters.text & filters.private & auth_filter & ~filters.command(
     ["start", "drm", "live", "plan", "id", "t2t", "t2h", "logs"]))
 async def text_handler(bot: Client, m: Message):
     if m.from_user.is_bot:
@@ -1420,7 +1420,7 @@ async def back_to_start_callback(client, callback_query: CallbackQuery):
         ),
         reply_markup=InlineKeyboardMarkup(
             [[
-                InlineKeyboardButton("𝐈𝐓'𝐬𝐆𝐎𝐋𝐔.™®",
+                InlineKeyboardButton("👑 OWNER 👑",
                                      url="https://t.me/RixieHQ")
             ],
              [
