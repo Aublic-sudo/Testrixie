@@ -83,6 +83,39 @@ bot = Client("ugx",
 # Register command handlers
 register_clean_handler(bot)
 
+def auth_check_filter(_, client, message):
+
+    try:
+
+        # 🔓 Public commands (sab use kar sakte)
+        if message.command:
+            cmd = message.command[0].lower()
+
+            if cmd in ["start", "plan", "id"]:
+                return True
+
+        # 👑 Admin always allowed
+        if message.from_user and db.is_admin(message.from_user.id):
+            return True
+
+        # 📢 Channel check
+        if message.chat.type == "channel":
+            return db.is_channel_authorized(
+                message.chat.id,
+                client.me.username
+            )
+
+        # 👤 User subscription check
+        return db.is_user_authorized(
+            message.from_user.id,
+            client.me.username
+        )
+
+    except Exception:
+        return False
+
+
+auth_filter = filters.create(auth_check_filter)
 
 @bot.on_message(filters.command("setlog") & filters.private)
 async def set_log_channel_cmd(client: Client, message: Message):
@@ -177,9 +210,9 @@ api_url = "http://master-api-v3.vercel.app/"
 api_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNzkxOTMzNDE5NSIsInRnX3VzZXJuYW1lIjoi4p61IFtvZmZsaW5lXSIsImlhdCI6MTczODY5MjA3N30.SXzZ1MZcvMp5sGESj0hBKSghhxJ3k1GTWoBUbivUe1I"
 cwtoken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTExOTcwNjQsImNvbiI6eyJpc0FkbWluIjpmYWxzZSwiYXVzZXIiOiJVMFZ6TkdGU2NuQlZjR3h5TkZwV09FYzBURGxOZHowOSIsImlkIjoiVWtoeVRtWkhNbXRTV0RjeVJIcEJUVzExYUdkTlp6MDkiLCJmaXJzdF9uYW1lIjoiVWxadVFXaFBaMnAwSzJsclptVXpkbGxXT0djMlREWlRZVFZ5YzNwdldXNXhhVEpPWjFCWFYyd3pWVDA5IiwiZW1haWwiOiJWSGgyWjB0d2FUZFdUMVZYYmxoc2FsZFJSV2xrY0RWM2FGSkRSU3RzV0c5M1pDOW1hR0kxSzBOeVRUMDkiLCJwaG9uZSI6IldGcFZSSFZOVDJFeGNFdE9Oak4zUzJocmVrNHdRVDA5IiwiYXZhdGFyIjoiSzNWc2NTOHpTMHAwUW5sa2JrODNSRGx2ZWtOaVVUMDkiLCJyZWZlcnJhbF9jb2RlIjoiWkdzMlpUbFBORGw2Tm5OclMyVTRiRVIxTkVWb1FUMDkiLCJkZXZpY2VfdHlwZSI6ImFuZHJvaWQiLCJkZXZpY2VfdmVyc2lvbiI6IlEoQW5kcm9pZCAxMC4wKSIsImRldmljZV9tb2RlbCI6IlhpYW9taSBNMjAwN0oyMENJIiwicmVtb3RlX2FkZHIiOiI0NC4yMDIuMTkzLjIyMCJ9fQ.ONBsbnNwCQQtKMK2h18LCi73e90s2Cr63ZaIHtYueM-Gt5Z4sF6Ay-SEaKaIf1ir9ThflrtTdi5eFkUGIcI78R1stUUch_GfBXZsyg7aVyH2wxm9lKsFB2wK3qDgpd0NiBoT-ZsTrwzlbwvCFHhMp9rh83D4kZIPPdbp5yoA_06L0Zr4fNq3S328G8a8DtboJFkmxqG2T1yyVE2wLIoR3b8J3ckWTlT_VY2CCx8RjsstoTrkL8e9G5ZGa6sksMb93ugautin7GKz-nIz27pCr0h7g9BCoQWtL69mVC5xvVM3Z324vo5uVUPBi1bCG-ptpD9GWQ4exOBk9fJvGo-vRg"
 photologo = 'https://ibb.co/5g9Hbnv1'  #https://i.ibb.co/v6Vr7HCt/1000003297.png
-photoyt = 'https://ibb.co/5g9Hbnv1'  #https://i.ibb.co/v6Vr7HCt/1000003297.png
-photocp = 'https://ibb.co/5g9Hbnv1'
-photozip = 'https://ibb.co/5g9Hbnv1'
+photoyt = 'https://i.ibb.co/5g9Hbnv1/IMG-20260224-130840-460.jpg'  #https://i.ibb.co/v6Vr7HCt/1000003297.png
+photocp = 'https://i.ibb.co/5g9Hbnv1/IMG-20260224-130840-460.jpg'
+photozip = 'https://i.ibb.co/5g9Hbnv1/IMG-20260224-130840-460.jpg'
 
 # Inline keyboard for start command
 BUTTONSCONTACT = InlineKeyboardMarkup([[
@@ -195,9 +228,9 @@ keyboard = InlineKeyboardMarkup([
 
 # Image URLs for the random image feature
 image_urls = [
-    "https://i.ibb.co/v6Vr7HCt/1000003297.png",
-    "https://i.ibb.co/v6Vr7HCt/1000003297.png",
-    "https://i.ibb.co/v6Vr7HCt/1000003297.png",
+    "https://i.ibb.co/5g9Hbnv1/IMG-20260224-130840-460.jpg",
+    "https://i.ibb.co/5g9Hbnv1/IMG-20260224-130840-460.jpg",
+    "https://i.ibb.co/5g9Hbnv1/IMG-20260224-130840-460.jpg",
     # Add more image URLs as needed
 ]
 
@@ -366,39 +399,7 @@ async def start(bot: Client, m: Message):
         print(f"Error in start command: {str(e)}")
 
 
-def auth_check_filter(_, client, message):
 
-    try:
-
-        # 🔓 Public commands (sab use kar sakte)
-        if message.command:
-            cmd = message.command[0].lower()
-
-            if cmd in ["start", "plan", "id"]:
-                return True
-
-        # 👑 Admin always allowed
-        if message.from_user and db.is_admin(message.from_user.id):
-            return True
-
-        # 📢 Channel check
-        if message.chat.type == "channel":
-            return db.is_channel_authorized(
-                message.chat.id,
-                client.me.username
-            )
-
-        # 👤 User subscription check
-        return db.is_user_authorized(
-            message.from_user.id,
-            client.me.username
-        )
-
-    except Exception:
-        return False
-
-
-auth_filter = filters.create(auth_check_filter)
 
 
 @bot.on_message(~auth_filter & filters.private & filters.command)
@@ -426,8 +427,11 @@ async def call_html_handler(bot: Client, message: Message):
 
 
 @bot.on_message(filters.command(["logs"]) & auth_filter)
-async def send_logs(client: Client, m: Message):  # Correct parameter name
+async def send_logs(client: Client, m: Message):
 
+    
+    bot_info = await client.get_me()
+    bot_username = bot_info.username
     # Check authorization
     if m.chat.type == "channel":
         if not db.is_channel_authorized(m.chat.id, bot_username):
@@ -1309,8 +1313,15 @@ async def txt_handler(bot: Client, m: Message):
         )
 
 
-@bot.on_message(filters.text & filters.private & auth_filter & ~filters.command(
-    ["start", "drm", "addlive", "plan", "id", "t2t", "t2h", "logs"]))
+@bot.on_message(
+    filters.text
+    & filters.private
+    & auth_filter
+    & ~filters.command(
+        ["start", "drm", "addlive", "process", "stoplive", "killalllive",
+         "plan", "id", "t2t", "t2h", "logs"]
+    )
+)
 async def text_handler(bot: Client, m: Message):
     if m.from_user.is_bot:
         return
@@ -1508,23 +1519,36 @@ async def multi_watcher(pid, api, course_id, token, upload_chat, thread_id, clie
                 current_live = sid
                 last_title = title
 
-                safe_title = (title or "LIVE").replace("/", " ").replace(":","").strip()
+                safe_title = re.sub(r'[\\/*?:"<>|]', "", title or "LIVE").strip()
                 live_file = f"{safe_title}_{pid}.mp4"
 
                 await client.send_message(
                     upload_chat,
-                    f"🔴 LIVE STARTED\n🆔 Process : {pid}\n🎬 {title}",
+                    
+                    f"🔴 <b>LIVE STARTED</b>\n"
+                    f"🆔 Process : {str(pid).zfill(3)}\n"
+                    f"🎬 {title}\n"
+                    f"⬇️ <i>Recording & Downloading Started...</i>",
                     message_thread_id=thread_id
                 )
 
                 cmd = [
-                    "ffmpeg","-y","-i",url,
-                    "-c:v","libx264","-preset","ultrafast",
-                    "-c:a","aac",
+                    "ffmpeg",
+                    "-y",
+                    "-fflags", "+genpts",
+                    "-i", url,
+                    "-c:v", "libx264",
+                    "-preset", "ultrafast",
+                    "-c:a", "aac",
+                    "-pix_fmt", "yuv420p",
+                    "-movflags", "+faststart",
                     live_file
                 ]
 
                 proc = await asyncio.create_subprocess_exec(*cmd)
+
+                if pid in ACTIVE_LIVES:
+                    ACTIVE_LIVES[pid]["proc"] = proc
 
             # 🟢 LIVE END
             if not sid and current_live:
@@ -1539,10 +1563,17 @@ async def multi_watcher(pid, api, course_id, token, upload_chat, thread_id, clie
 
                     if live_file and os.path.exists(live_file):
 
+                        caption = (
+                            f"🎥 <b>Vid Id :</b> {str(pid).zfill(3)}\n"
+                            f"<b>Video Title :</b> {last_title} [480p].mp4\n\n"
+                            f"<blockquote>📚 Batch Name : {last_title}</blockquote>\n\n"
+                            f"<b>Extracted by ➤ @RixieHQ</b>"
+                        )
+
                         await client.send_video(
                             upload_chat,
                             live_file,
-                            caption=f"🎥 {last_title}\n🆔 Process : {pid}",
+                            caption=caption,
                             supports_streaming=True,
                             message_thread_id=thread_id
                         )
@@ -1577,7 +1608,9 @@ def setup_live(bot):
         await m.reply_text("🔐 Send AUTH TOKEN")
         token = (await client.listen(m.chat.id)).text.strip()
 
-        await m.reply_text("📤 Send CHAT ID where upload\nSend /d for same chat")
+        await m.reply_text(
+          "📤 Send the CHAT ID where the video should be uploaded.\n\nSend /d to use the current chat."
+        )
 
         chat_input = (await client.listen(m.chat.id)).text.strip()
 
@@ -1615,7 +1648,8 @@ def setup_live(bot):
             "api": api,
             "course": course_id,
             "upload": upload_chat,
-            "task": task
+            "task": task,
+            "proc": None
         }
 
     # ================= PROCESS LIST =================
@@ -1628,18 +1662,19 @@ def setup_live(bot):
 
         txt = "**🚀 ACTIVE LIVE PROCESSES**\n\n"
 
-        for pid,data in ACTIVE_LIVES.items():
+        for pid, data in ACTIVE_LIVES.items():
 
             txt += (
                 f"🆔 Process ID : {pid}\n"
                 f"🌐 API : {data['api']}\n"
-                f"📚 Course : {data['course']}\n"
+                f"📚 Course_id : {data['course']}\n"
                 f"📤 Upload Chat : {data['upload']}\n"
                 f"──────────────\n"
             )
 
         await m.reply_text(txt)
-      # ================= STOP SINGLE PROCESS =================
+
+    # ================= STOP SINGLE PROCESS =================
 
     @bot.on_message(filters.command("stoplive") & auth_filter)
     async def stop_live_process(client, m: Message):
@@ -1656,8 +1691,12 @@ def setup_live(bot):
                 return await m.reply_text("❌ Process not found")
 
             task = ACTIVE_LIVES[pid]["task"]
+            proc = ACTIVE_LIVES[pid].get("proc")
 
             task.cancel()
+
+            if proc:
+                proc.kill()
 
             ACTIVE_LIVES.pop(pid, None)
 
@@ -1665,7 +1704,6 @@ def setup_live(bot):
 
         except Exception as e:
             await m.reply_text(f"❌ Error : {e}")
-
 
     # ================= STOP ALL PROCESS =================
 
@@ -1677,12 +1715,15 @@ def setup_live(bot):
 
         stopped = 0
 
-        for pid,data in list(ACTIVE_LIVES.items()):
-
+        for pid, data in list(ACTIVE_LIVES.items()):
             try:
+                if data.get("proc"):
+                    data["proc"].kill()
+
                 data["task"].cancel()
                 ACTIVE_LIVES.pop(pid, None)
                 stopped += 1
+
             except:
                 pass
 
