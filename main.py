@@ -367,15 +367,33 @@ async def start(bot: Client, m: Message):
 
 
 def auth_check_filter(_, client, message):
+
     try:
-        # For channel messages
+
+        # 🔓 Public commands (sab use kar sakte)
+        if message.command:
+            cmd = message.command[0].lower()
+
+            if cmd in ["start", "plan", "id"]:
+                return True
+
+        # 👑 Admin always allowed
+        if message.from_user and db.is_admin(message.from_user.id):
+            return True
+
+        # 📢 Channel check
         if message.chat.type == "channel":
-            return db.is_channel_authorized(message.chat.id,
-                                            client.me.username)
-        # For private messages
-        else:
-            return db.is_user_authorized(message.from_user.id,
-                                         client.me.username)
+            return db.is_channel_authorized(
+                message.chat.id,
+                client.me.username
+            )
+
+        # 👤 User subscription check
+        return db.is_user_authorized(
+            message.from_user.id,
+            client.me.username
+        )
+
     except Exception:
         return False
 
