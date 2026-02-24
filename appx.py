@@ -270,7 +270,7 @@ def setup_appx(bot):
         await cb.message.edit(txt)
 
     # ================= DOWNLOAD =================
-    @bot.on_message(filters.text & filters.private)
+    @bot.on_message(filters.text & filters.private & ~filters.command)
     async def appx_video_download(client, m):
 
         user_id = m.from_user.id
@@ -315,7 +315,8 @@ def setup_appx(bot):
         if not video_url:
             return await m.reply_text("❌ Link not found")
 
-        filename=f"{title}.mp4".replace("/"," ")
+        safe_title = re.sub(r'[\\/*?:"<>|]', "", title)
+        filename = f"{safe_title}.mp4"
 
         await m.reply_text("⬇️ Recording Started...")
 
