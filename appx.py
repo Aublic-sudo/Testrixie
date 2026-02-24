@@ -19,7 +19,6 @@ API_MAP = {
         "/get/get_previous_live_videos?course_id={id}&start=-1&folder_wise_course=1&userid={uid}"
     ]
 }
-
 def get_headers(token,uid):
     return {
         "Authorization":token,
@@ -28,10 +27,36 @@ def get_headers(token,uid):
         "User-ID":uid,
         "source":"website"
     }
-
-# ================= SETUP =================
-
 def setup_appx(bot):
+
+    # ================= DOWNLOAD CALLBACK =================
+    @bot.on_callback_query(filters.regex("appxdl_"))
+    async def appx_download_cb(client, cb):
+
+        user_id = cb.from_user.id
+
+        if user_id not in USER_APPX:
+            return await cb.answer("❌ Login first", show_alert=True)
+
+        await cb.answer("⬇️ Starting Download...")
+
+    @bot.on_message(filters.command("appxlogin"))
+    async def appx_login(client, m):
+
+        await m.reply_text("🌐 Send API HOST")
+        api = (await client.listen(m.chat.id)).text.strip()
+
+        await m.reply_text("🔐 Send TOKEN")
+        token = (await client.listen(m.chat.id)).text.strip()
+
+        USER_APPX[m.from_user.id] = {
+            "api": api,
+            "token": token,
+            "uid": "-2",
+            "course": None
+        }
+
+        await m.reply_text("✅ Login Saved\nNow use /appxcourses")
 
     # ================= COURSES =================
     @bot.on_message(filters.command("appxcourses"))
@@ -62,8 +87,7 @@ def setup_appx(bot):
                         cid=c.get("id") or c.get("item_id")
                         name=c.get("course_name") or c.get("title")
 
-                        USER_APPX[user_id]["course"]=str(cid)
-
+                        
                         btn=InlineKeyboardMarkup([[
                             InlineKeyboardButton(
                                 "📁 Folderwise",
@@ -93,8 +117,10 @@ def setup_appx(bot):
         api=data["api"]
         token=data["token"]
         uid=data["uid"]
+        course_id = cb.data.split("_")[1]
+        USER_APPX[user_id]["course"] = course_id
 
-        course_id=cb.data.split("_")[1]
+        
 
         await cb.message.edit("📼 Loading Previous Videos...")
 
@@ -121,8 +147,10 @@ def setup_appx(bot):
         api=data["api"]
         token=data["token"]
         uid=data["uid"]
+        course_id = cb.data.split("_")[1]
+        USER_APPX[user_id]["course"] = course_id
 
-        course_id=cb.data.split("_")[1]
+        
 
         await cb.message.edit("📁 Loading Subjects...")
 
