@@ -1,3 +1,4 @@
+import re
 import requests
 import asyncio
 from pyrogram import filters
@@ -72,6 +73,7 @@ def setup_appx(bot):
         api=data["api"]
         token=data["token"]
         uid=data["uid"]
+        sent_ids = set()
 
         for ep in API_MAP["purchased"]:
 
@@ -86,6 +88,10 @@ def setup_appx(bot):
                     for c in r["data"]:
                         cid=c.get("id") or c.get("item_id")
                         name=c.get("course_name") or c.get("title")
+
+                        if cid in sent_ids:
+                           continue
+                        sent_ids.add(cid)
 
                         
                         btn=InlineKeyboardMarkup([[
@@ -183,6 +189,10 @@ def setup_appx(bot):
         api = data["api"]
         token = data["token"]
         uid = data["uid"]
+        
+        
+        
+    
 
         _, course_id, sid = cb.data.split("_")
 
@@ -270,7 +280,7 @@ def setup_appx(bot):
         await cb.message.edit(txt)
 
     # ================= DOWNLOAD =================
-    @bot.on_message(filters.text & filters.private & ~filters.command)
+    @bot.on_message(filters.private & filters.regex(r"^\d+$"))
     async def appx_video_download(client, m):
 
         user_id = m.from_user.id
@@ -289,6 +299,8 @@ def setup_appx(bot):
         token = data["token"]
         uid = data["uid"]
         course = data["course"]
+        if not course:
+           return await m.reply_text("❌ Select course first using /appxcourses")
 
         await m.reply_text("🔎 Fetching Video Details...")
 
