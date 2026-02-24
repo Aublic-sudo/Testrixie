@@ -1310,7 +1310,7 @@ async def txt_handler(bot: Client, m: Message):
 
 
 @bot.on_message(filters.text & filters.private & auth_filter & ~filters.command(
-    ["start", "drm", "live", "plan", "id", "t2t", "t2h", "logs"]))
+    ["start", "drm", "addlive", "plan", "id", "t2t", "t2h", "logs"]))
 async def text_handler(bot: Client, m: Message):
     if m.from_user.is_bot:
         return
@@ -1429,9 +1429,12 @@ async def back_to_start_callback(client, callback_query: CallbackQuery):
              ]]))
 
 
-# ================= LIVE AUTO RECORDER =================
-# ================= LIVE AUTO RECORDER =================
+
+# ================= LIVE AUTO RECORDER (MULTI VERSION) =================
+
 ACTIVE_LIVES = {}
+PROCESS_COUNTER = 0
+
 
 def fetch_live(api_base, course_id, token):
 
@@ -1479,17 +1482,91 @@ def fetch_live(api_base, course_id, token):
     return None,None,None
 
 
+# ================= MULTI WATCHER LOOP =================
+
+async def multi_watcher(pid, api, course_id, token, upload_chat, thread_id, client, owner_chat):
+
+    current_live = None
+    live_file = None
+    proc = None
+    live_missing_count = 0
+    last_title = None
+
+    try:
+        while True:
+
+            title, sid, url = await asyncio.to_thread(fetch_live, api, course_id, token)
+
+            if title == "AUTH_ERROR":
+                await client.send_message(owner_chat, f"❌ PROCESS {pid} TOKEN EXPIRED")
+                break
+
+            # 🔴 LIVE START
+            if sid and sid != current_live:
+
+                live_missing_count = 0
+                current_live = sid
+                last_title = title
+
+                safe_title = (title or "LIVE").replace("/", " ").replace(":","").strip()
+                live_file = f"{safe_title}_{pid}.mp4"
+
+                await client.send_message(
+                    upload_chat,
+                    f"🔴 LIVE STARTED\n🆔 Process : {pid}\n🎬 {title}",
+                    message_thread_id=thread_id
+                )
+
+                cmd = [
+                    "ffmpeg","-y","-i",url,
+                    "-c:v","libx264","-preset","ultrafast",
+                    "-c:a","aac",
+                    live_file
+                ]
+
+                proc = await asyncio.create_subprocess_exec(*cmd)
+
+            # 🟢 LIVE END
+            if not sid and current_live:
+
+                live_missing_count += 1
+
+                if live_missing_count >= 3:
+
+                    if proc:
+                        proc.kill()
+                        proc = None
+
+                    if live_file and os.path.exists(live_file):
+
+                        await client.send_video(
+                            upload_chat,
+                            live_file,
+                            caption=f"🎥 {last_title}\n🆔 Process : {pid}",
+                            supports_streaming=True,
+                            message_thread_id=thread_id
+                        )
+
+                        os.remove(live_file)
+
+                    current_live = None
+                    live_file = None
+                    live_missing_count = 0
+
+            await asyncio.sleep(20)
+
+    finally:
+        ACTIVE_LIVES.pop(pid, None)
+
+
+# ================= ADD LIVE COMMAND =================
+
 def setup_live(bot):
 
-    @bot.on_message(filters.command("live") & auth_filter)
-    async def live_setup(client, m: Message):
+    @bot.on_message(filters.command("addlive") & auth_filter)
+    async def add_live_multi(client, m: Message):
 
-        user_id = m.from_user.id
-
-        if user_id in ACTIVE_LIVES:
-            return await m.reply_text("⚠️ LIVE watcher already running")
-
-        # ================= INPUTS =================
+        global PROCESS_COUNTER
 
         await m.reply_text("🌐 Send API HOST")
         api = (await client.listen(m.chat.id)).text.strip()
@@ -1500,134 +1577,116 @@ def setup_live(bot):
         await m.reply_text("🔐 Send AUTH TOKEN")
         token = (await client.listen(m.chat.id)).text.strip()
 
-        await m.reply_text(
-            "📤 Send CHAT ID where video should upload\n\n"
-            "Send `/d` for default (same chat)\n"
-            "Supports topics like : -100xxxx/34",
-            quote=True
-        )
+        await m.reply_text("📤 Send CHAT ID where upload\nSend /d for same chat")
 
         chat_input = (await client.listen(m.chat.id)).text.strip()
 
-        # ===== chat id parse =====
         if chat_input == "/d":
             upload_chat = m.chat.id
-            message_thread_id = None
+            thread_id = None
         else:
             if "/" in chat_input:
                 base, topic = chat_input.split("/")
                 upload_chat = int(base)
-                message_thread_id = int(topic)
+                thread_id = int(topic)
             else:
                 upload_chat = int(chat_input)
-                message_thread_id = None
+                thread_id = None
 
-        # ===== API TEST =====
-        test_title,_,_ = await asyncio.to_thread(fetch_live,api,course_id,token)
+        PROCESS_COUNTER += 1
+        pid = PROCESS_COUNTER
 
-        if test_title == "AUTH_ERROR":
-            return await m.reply_text("❌ Invalid AUTH TOKEN or API HOST")
+        await m.reply_text(f"✅ LIVE PROCESS STARTED\n🆔 Process ID : {pid}")
 
-        if test_title is None:
-            await m.reply_text("⚠️ No LIVE found currently — watcher still started")
+        task = asyncio.create_task(
+            multi_watcher(
+                pid,
+                api,
+                course_id,
+                token,
+                upload_chat,
+                thread_id,
+                client,
+                m.chat.id
+            )
+        )
 
-        await m.reply_text("✅ LIVE WATCHER STARTED 🔥")
+        ACTIVE_LIVES[pid] = {
+            "api": api,
+            "course": course_id,
+            "upload": upload_chat,
+            "task": task
+        }
 
-        ACTIVE_LIVES[user_id] = True
+    # ================= PROCESS LIST =================
 
-        # ================= WATCHER =================
-        async def watcher():
+    @bot.on_message(filters.command("process") & auth_filter)
+    async def list_process(client, m: Message):
 
-            current_live = None
-            live_file = None
-            proc = None
-            live_missing_count = 0
-            last_title = None
+        if not ACTIVE_LIVES:
+            return await m.reply_text("❌ No Active Live Processes")
+
+        txt = "**🚀 ACTIVE LIVE PROCESSES**\n\n"
+
+        for pid,data in ACTIVE_LIVES.items():
+
+            txt += (
+                f"🆔 Process ID : {pid}\n"
+                f"🌐 API : {data['api']}\n"
+                f"📚 Course : {data['course']}\n"
+                f"📤 Upload Chat : {data['upload']}\n"
+                f"──────────────\n"
+            )
+
+        await m.reply_text(txt)
+      # ================= STOP SINGLE PROCESS =================
+
+    @bot.on_message(filters.command("stoplive") & auth_filter)
+    async def stop_live_process(client, m: Message):
+
+        try:
+            parts = m.text.split()
+
+            if len(parts) != 2:
+                return await m.reply_text("❌ Usage : /stoplive PROCESS_ID")
+
+            pid = int(parts[1])
+
+            if pid not in ACTIVE_LIVES:
+                return await m.reply_text("❌ Process not found")
+
+            task = ACTIVE_LIVES[pid]["task"]
+
+            task.cancel()
+
+            ACTIVE_LIVES.pop(pid, None)
+
+            await m.reply_text(f"🛑 LIVE PROCESS {pid} STOPPED")
+
+        except Exception as e:
+            await m.reply_text(f"❌ Error : {e}")
+
+
+    # ================= STOP ALL PROCESS =================
+
+    @bot.on_message(filters.command("killalllive") & auth_filter)
+    async def stop_all_live(client, m: Message):
+
+        if not ACTIVE_LIVES:
+            return await m.reply_text("❌ No Active Processes")
+
+        stopped = 0
+
+        for pid,data in list(ACTIVE_LIVES.items()):
 
             try:
-                while True:
-                    try:
-                        title, sid, url = await asyncio.to_thread(
-                            fetch_live, api, course_id, token)
+                data["task"].cancel()
+                ACTIVE_LIVES.pop(pid, None)
+                stopped += 1
+            except:
+                pass
 
-                        if title == "AUTH_ERROR":
-                            await client.send_message(m.chat.id,"❌ AUTH TOKEN EXPIRED")
-                            break
-
-                        # ================= LIVE START =================
-                        if sid and sid != current_live:
-
-                            live_missing_count = 0
-                            current_live = sid
-                            last_title = title
-
-                            safe_title = (title or "LIVE").replace("/", " ").replace(":","").strip()
-                            live_file = f"{safe_title}.mp4"
-
-                            await client.send_message(
-                                upload_chat,
-                                f"🔴 **LIVE STARTED**\n\n🎬 {title}\n\n⏬ Downloading Live Lecture...",
-                                message_thread_id=message_thread_id
-                            )
-
-                            cmd = [
-                                "ffmpeg","-y","-i",url,
-                                "-c:v","libx264","-preset","ultrafast",
-                                "-c:a","aac",
-                                live_file
-                            ]
-
-                            proc = await asyncio.create_subprocess_exec(*cmd)
-
-                        # ================= LIVE END =================
-                        if not sid and current_live:
-
-                            live_missing_count += 1
-
-                            if live_missing_count >= 3:
-
-                                await client.send_message(
-                                    upload_chat,
-                                    "📤 Uploading LIVE...",
-                                    message_thread_id=message_thread_id
-                                )
-
-                                if proc:
-                                    proc.kill()
-                                    proc = None
-
-                                if live_file and os.path.exists(live_file):
-
-                                    caption = (
-                                      f"🎥 <b>Vid Id :</b> 001\n"
-                                      f"<b>Video Title :</b> {last_title} [854x480p].mp4\n\n"
-                                      f"<blockquote>📚 Batch Name : {last_title}</blockquote>\n\n"
-                                      f"<b>Extracted by ➤ @RixieHQ</b>"
-                                    )
-
-                                    await client.send_video(
-                                        upload_chat,
-                                        live_file,
-                                        caption=caption,
-                                        supports_streaming=True,
-                                        message_thread_id=message_thread_id
-                                    )
-
-                                    os.remove(live_file)
-
-                                current_live = None
-                                live_file = None
-                                live_missing_count = 0
-
-                    except Exception as e:
-                        print("WATCHER ERROR:", e)
-
-                    await asyncio.sleep(20)
-
-            finally:
-                ACTIVE_LIVES.pop(user_id,None)
-
-        asyncio.create_task(watcher())
+        await m.reply_text(f"🛑 ALL LIVE PROCESSES STOPPED\nTotal : {stopped}")
 
 
 print("Bot Started...")
