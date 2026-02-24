@@ -47,6 +47,7 @@ from pyrogram.errors.exceptions.bad_request_400 import MessageNotModified
 # 🧠 Bot Modules
 import auth
 import itsgolu as helper
+from appx import setup_appx
 from html_handler import html_handler
 from itsgolu import *
 
@@ -1319,7 +1320,7 @@ async def txt_handler(bot: Client, m: Message):
     & auth_filter
     & ~filters.command(
         ["start", "drm", "addlive", "process", "stoplive", "killalllive",
-         "plan", "id", "t2t", "t2h", "logs"]
+         "plan", "id", "t2t", "t2h", "logs", "appxlogin","appxcourses]
     )
 )
 async def text_handler(bot: Client, m: Message):
@@ -1732,4 +1733,5 @@ def setup_live(bot):
 
 print("Bot Started...")
 setup_live(bot)
+setup_appx(bot)
 bot.run()
